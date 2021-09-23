@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from tensorflow import keras
 from tensorflow.keras import layers
 
@@ -10,22 +11,32 @@ MNIST convert test
 num_classes = 10
 input_shape = (28, 28, 1)
 
-# the data, split between train and test sets
-(x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
+# load data
+train = pd.read_csv("c:/Users/Administrator/Documents/Workspace/kaggle_study/digit-recognizer/train.csv")
+test = pd.read_csv('c:/Users/Administrator/Documents/Workspace/kaggle_study/digit-recognizer/test.csv')
 
-# Scale images to the [0, 1] range (normalizaiton)
-x_train = x_train.astype("float32") / 255
-y_train = y_train.astype("float32") / 255
-# Make sure images have shape (28, 28, 1)
-x_train = np.expand_dims(x_train, -1)
-y_train = np.expand_dims(y_train, -1)
-print("x_train shape :", x_train.shape)
-print(x_train.shape[0], "train samples")
-print(x_test.shape[0], "test samples")
+features = train.drop('label', axis=1)
+y_train = train['label']
+
+# Train images
+X_ = np.array(features)
+X_train = X_.reshape(X_.shape[0],28,28)
+X_train = np.expand_dims(X_train, -1)
+
+# Test images
+X_test = np.array(test)
+X_test = X_test.reshape(X_test.shape[0],28,28)
+X_test = np.expand_dims(X_test, -1)
+
+print("train shape :", X_train.shape, "test shape :", X_test.shape)
+
+# Scale images to the [0, 1] range
+x_train = X_train.astype("float32") / 255
+x_test = X_test.astype("float32") / 255
+
 
 # convert class vectors to binary class matrices
 y_train = keras.utils.to_categorical(y_train, num_classes)
-y_test = keras.utils.to_categorical(y_test, num_classes)
 
 # Build the model
 model = keras.Sequential(
@@ -41,3 +52,18 @@ model = keras.Sequential(
     ]
 )
 model.summary()
+
+# Train the model
+batch_size = 128
+epochs = 15
+
+model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
+
+model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs, validation_split=0.1)
+
+# predict
+preds = np.argmax(model.predict(X_test), axis=1)
+
+sub = pd.read_csv('c:/Users/Administrator/Documents/Workspace/kaggle_study/digit-recognizer/sample_submission.csv')
+sub['Label'] = preds
+sub.to_csv('c:/Users/Administrator/Documents/Workspace/kaggle_study/digit-recognizer/submission.csv', index=False)
